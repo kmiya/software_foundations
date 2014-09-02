@@ -90,18 +90,18 @@ Theorem mult_0_r : forall n : nat,
 Proof.
   intros n. induction n as [| n'].
   Case "n = 0".
-  simpl. reflexivity.
+    simpl. reflexivity.
   Case "n = S n'".
-  simpl. rewrite -> IHn'. reflexivity. Qed.
+    simpl. rewrite -> IHn'. reflexivity. Qed.
 
 Theorem plus_n_Sm : forall n m : nat,
   S (n + m) = n + (S m).
 Proof.
   intros n m. induction n as [| n'].
   Case "n = 0".
-  simpl. reflexivity.
+    simpl. reflexivity.
   Case "n = S n'".
-  simpl. rewrite -> IHn'. reflexivity. Qed.
+    simpl. rewrite -> IHn'. reflexivity. Qed.
 
 Theorem plus_comm : forall n m : nat,
   n + m = m + n.
@@ -177,7 +177,7 @@ Proof.
   rewrite -> plus_assoc.
   assert (H1: n + m = m + n).
     Case "Proof of assertion H1".
-      rewrite -> plus_comm. reflexivity.
+    rewrite -> plus_comm. reflexivity.
   rewrite -> H1.
   rewrite <- plus_assoc. reflexivity.
 Qed.
@@ -199,7 +199,7 @@ Proof.
 Qed.
 
 Theorem mult_comm : forall m n : nat,
- m * n = n * m.
+  m * n = n * m.
 Proof.
   intros m n. induction m as [| m'].
   Case "m = 0".
