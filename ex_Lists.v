@@ -569,3 +569,97 @@ Proof.
   rewrite -> rev_involutive.
   reflexivity.
 Qed.
+
+(** * Options *)
+
+Inductive natoption : Type :=
+  | Some : nat -> natoption
+  | None : natoption.
+
+Fixpoint index (n:nat) (l:natlist) : natoption :=
+  match l with
+  | nil => None
+  | a :: l' => match beq_nat n O with
+               | true => Some a
+               | false => index (pred n) l'
+               end
+  end.
+
+Definition option_elim (d : nat) (o : natoption) : nat :=
+  match o with
+  | Some n' => n'
+  | None => d
+  end.
+
+(** **** Exercise: 2 stars (hd_opt) *)
+(** Using the same idea, fix the [hd] function from earlier so we don't
+   have to pass a default element for the [nil] case.  *)
+
+Definition hd_opt (l : natlist) : natoption :=
+  match l with
+    | nil => None
+    | h :: t => Some h
+  end.
+
+Example test_hd_opt1 : hd_opt [] = None.
+Proof. reflexivity. Qed.
+
+Example test_hd_opt2 : hd_opt [1] = Some 1.
+Proof. reflexivity. Qed.
+
+Example test_hd_opt3 : hd_opt [5;6] = Some 5.
+Proof. reflexivity. Qed.
+
+(** **** Exercise: 1 star, optional (option_elim_hd) *)
+(** This exercise relates your new [hd_opt] to the old [hd]. *)
+
+Theorem option_elim_hd : forall (l : natlist) (default : nat),
+  hd default l = option_elim default (hd_opt l).
+Proof.
+  intros l d. destruct l as [| h t].
+  reflexivity.
+  reflexivity.
+Qed.
+
+(** * Dictionaries *)
+
+Module Dictionary.
+
+Inductive dictionary : Type :=
+  | empty  : dictionary
+  | record : nat -> nat -> dictionary -> dictionary.
+
+Definition insert (key value : nat) (d : dictionary) : dictionary :=
+  (record key value d).
+
+Fixpoint find (key : nat) (d : dictionary) : natoption :=
+  match d with
+  | empty         => None
+  | record k v d' => if (beq_nat key k)
+                       then (Some v)
+                       else (find key d')
+  end.
+
+(** **** Exercise: 1 star (dictionary_invariant1) *)
+(** Complete the following proof. *)
+
+Theorem dictionary_invariant1' : forall (d : dictionary) (k v: nat),
+  (find k (insert k v d)) = Some v.
+Proof.
+  intros d k v.
+  simpl. rewrite <- beq_nat_refl. reflexivity.
+Qed.
+
+(** **** Exercise: 1 star (dictionary_invariant2) *)
+(** Complete the following proof. *)
+
+Theorem dictionary_invariant2' : forall (d : dictionary) (m n o: nat),
+  beq_nat m n = false -> find m d = find m (insert n o d).
+Proof.
+  intros d m n o H.
+  simpl. rewrite -> H. reflexivity.
+Qed.
+
+End Dictionary.
+
+End NatList.
