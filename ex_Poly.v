@@ -155,3 +155,313 @@ Proof.
   Case "l1 = cons".
     simpl. rewrite -> IHt. reflexivity.
 Qed.
+
+(** ** Polymorphic Pairs *)
+
+Inductive prod (X Y : Type) : Type :=
+  pair : X -> Y -> prod X Y.
+
+Arguments pair {X} {Y} _ _.
+
+Notation "( x , y )" := (pair x y).
+
+Notation "X * Y" := (prod X Y) : type_scope.
+
+Definition fst {X Y : Type} (p : X * Y) : X :=
+  match p with (x,y) => x end.
+
+Definition snd {X Y : Type} (p : X * Y) : Y :=
+  match p with (x,y) => y end.
+
+Fixpoint combine {X Y : Type} (lx : list X) (ly : list Y)
+           : list (X*Y) :=
+  match (lx,ly) with
+  | ([],_) => []
+  | (_,[]) => []
+  | (x::tx, y::ty) => (x,y) :: (combine tx ty)
+  end.
+
+(** **** Exercise: 1 star, optional (combine_checks) *)
+(** Try answering the following questions on paper and
+    checking your answers in coq:
+    - What is the type of [combine] (i.e., what does [Check
+      @combine] print?)
+
+     => list X -> list Y -> list (X*Y)
+
+    - What does
+        Eval compute in (combine [1;2] [false;false;true;true]).
+      print?
+
+     => [(1,false); (2,false)]
+
+   []
+*)
+Check @combine.
+(* =>  forall X Y : Type, list X -> list Y -> list (X * Y) *)
+Eval compute in (combine [1;2] [false;false;true;true]).
+(*  = [(1, false); (2, false)]  *)
+(*  : list (nat * bool)         *)
+
+
+(** **** Exercise: 2 stars (split) *)
+(** The function [split] is the right inverse of combine: it takes a
+    list of pairs and returns a pair of lists.  In many functional
+    programing languages, this function is called [unzip].
+
+    Uncomment the material below and fill in the definition of
+    [split].  Make sure it passes the given unit tests. *)
+
+Fixpoint split
+           {X Y : Type} (l : list (X*Y))
+           : (list X) * (list Y) :=
+  match l with
+    | [] => ([],[])
+    | h :: t => match h with
+                  | (x,y) => (x :: fst (split t), y :: snd (split t))
+                end
+  end.
+
+Example test_split:
+  split [(1,false);(2,false)] = ([1;2],[false;false]).
+Proof. reflexivity. Qed.
+
+(** ** Polymorphic Options *)
+
+Inductive option (X:Type) : Type :=
+  | Some : X -> option X
+  | None : option X.
+
+Arguments Some {X} _.
+Arguments None {X}.
+
+Fixpoint index {X : Type} (n : nat)
+               (l : list X) : option X :=
+  match l with
+  | [] => None
+  | a :: l' => if beq_nat n O then Some a else index (pred n) l'
+  end.
+
+(** **** Exercise: 1 star, optional (hd_opt_poly) *)
+(** Complete the definition of a polymorphic version of the
+    [hd_opt] function from the last chapter. Be sure that it
+    passes the unit tests below. *)
+
+Definition hd_opt {X : Type} (l : list X)  : option X :=
+  match l with
+    | [] => None
+    | h :: t => Some h
+  end.
+
+(** Once again, to force the implicit arguments to be explicit,
+    we can use [@] before the name of the function. *)
+
+Check @hd_opt.
+
+Example test_hd_opt1 :  hd_opt [1;2] = Some 1.
+Proof. reflexivity. Qed.
+Example test_hd_opt2 :   hd_opt  [[1];[2]]  = Some [1].
+Proof. reflexivity. Qed.
+
+(** * Functions as Data *)
+(** ** Higher-Order Functions *)
+
+Definition doit3times {X:Type} (f:X->X) (n:X) : X :=
+  f (f (f n)).
+
+(** ** Partial Application *)
+
+Definition plus3 := plus 3.
+
+(** ** Digression: Currying *)
+
+(** **** Exercise: 2 stars, advanced (currying) *)
+(** In Coq, a function [f : A -> B -> C] really has the type [A
+    -> (B -> C)].  That is, if you give [f] a value of type [A], it
+    will give you function [f' : B -> C].  If you then give [f'] a
+    value of type [B], it will return a value of type [C].  This
+    allows for partial application, as in [plus3].  Processing a list
+    of arguments with functions that return functions is called
+    _currying_, in honor of the logician Haskell Curry.
+
+    Conversely, we can reinterpret the type [A -> B -> C] as [(A *
+    B) -> C].  This is called _uncurrying_.  With an uncurried binary
+    function, both arguments must be given at once as a pair; there is
+    no partial application. *)
+
+(** We can define currying as follows: *)
+
+Definition prod_curry {X Y Z : Type}
+  (f : X * Y -> Z) (x : X) (y : Y) : Z := f (x, y).
+
+(** As an exercise, define its inverse, [prod_uncurry].  Then prove
+    the theorems below to show that the two are inverses. *)
+
+Definition prod_uncurry {X Y Z : Type}
+  (f : X -> Y -> Z) (p : X * Y) : Z :=
+  match p with (x,y) => f x y end.
+
+(** (Thought exercise: before running these commands, can you
+    calculate the types of [prod_curry] and [prod_uncurry]?) *)
+
+Check @prod_curry.    (* forall X Y Z : Type, (X * Y -> Z) -> X -> Y -> Z *)
+Check @prod_uncurry.  (* forall X Y Z : Type, (X -> Y -> Z) -> X * Y -> Z *)
+
+Theorem uncurry_curry : forall (X Y Z : Type) (f : X -> Y -> Z) x y,
+  prod_curry (prod_uncurry f) x y = f x y.
+Proof.
+  intros X Y Z f x y. reflexivity. Qed.
+
+Theorem curry_uncurry : forall (X Y Z : Type)
+                               (f : (X * Y) -> Z) (p : X * Y),
+  prod_uncurry (prod_curry f) p = f p.
+Proof.
+  intros X Y Z f p. destruct p as [n m].
+  reflexivity.
+Qed.
+
+(** ** Filter *)
+
+Fixpoint filter {X:Type} (test: X->bool) (l:list X)
+                : (list X) :=
+  match l with
+  | []     => []
+  | h :: t => if test h then h :: (filter test t)
+                        else       filter test t
+  end.
+
+Definition length_is_1 {X : Type} (l : list X) : bool :=
+  beq_nat (length l) 1.
+
+(** ** Anonymous Functions *)
+
+(** **** Exercise: 2 stars (filter_even_gt7) *)
+
+(** Use [filter] (instead of [Fixpoint]) to write a Coq function
+    [filter_even_gt7] that takes a list of natural numbers as input
+    and returns a list of just those that are even and greater than
+    7. *)
+
+Definition filter_even_gt7 (l : list nat) : list nat :=
+  filter (fun x => andb (evenb x) (negb (blt_nat x 7))) l.
+
+Example test_filter_even_gt7_1 :
+  filter_even_gt7 [1;2;6;9;10;3;12;8;7] = [10;12;8].
+Proof. reflexivity. Qed.
+
+Example test_filter_even_gt7_2 :
+  filter_even_gt7 [5;2;6;19;129] = [].
+Proof. reflexivity. Qed.
+
+(** **** Exercise: 3 stars (partition) *)
+(** Use [filter] to write a Coq function [partition]:
+  partition : forall X : Type,
+              (X -> bool) -> list X -> list X * list X
+   Given a set [X], a test function of type [X -> bool] and a [list
+   X], [partition] should return a pair of lists.  The first member of
+   the pair is the sublist of the original list containing the
+   elements that satisfy the test, and the second is the sublist
+   containing those that fail the test.  The order of elements in the
+   two sublists should be the same as their order in the original
+   list.
+*)
+
+Definition partition {X : Type} (test : X -> bool) (l : list X)
+                     : list X * list X :=
+  ( (filter (fun x => test x) l), (filter (fun x => negb (test x)) l) ).
+
+Example test_partition1: partition oddb [1;2;3;4;5] = ([1;3;5], [2;4]).
+Proof. reflexivity. Qed.
+Example test_partition2: partition (fun x => false) [5;9;0] = ([], [5;9;0]).
+Proof. reflexivity. Qed.
+
+(** ** Map *)
+
+Fixpoint map {X Y:Type} (f:X->Y) (l:list X)
+             : (list Y) :=
+  match l with
+  | []     => []
+  | h :: t => (f h) :: (map f t)
+  end.
+
+(** ** Map for options *)
+(** **** Exercise: 3 stars (map_rev) *)
+(** Show that [map] and [rev] commute.  You may need to define an
+    auxiliary lemma. *)
+
+Lemma map_snoc : forall (X Y : Type) (f : X -> Y) (l : list X) (v : X),
+  map f (snoc l v) = snoc (map f l) (f v).
+Proof.
+  intros X Y f l v. induction l as [| h t].
+  Case "l = []".
+    reflexivity.
+  Case "l = cons".
+    simpl. rewrite IHt. reflexivity.
+Qed.
+
+Theorem map_rev : forall (X Y : Type) (f : X -> Y) (l : list X),
+  map f (rev l) = rev (map f l).
+Proof.
+  intros X Y f l. induction l as [| h t].
+  Case "l = []".
+    reflexivity.
+  Case "l = cons".
+    simpl. rewrite <- IHt. rewrite map_snoc. reflexivity.
+Qed.
+
+(** **** Exercise: 2 stars (flat_map) *)
+(** The function [map] maps a [list X] to a [list Y] using a function
+    of type [X -> Y].  We can define a similar function, [flat_map],
+    which maps a [list X] to a [list Y] using a function [f] of type
+    [X -> list Y].  Your definition should work by 'flattening' the
+    results of [f], like so:
+        flat_map (fun n => [n;n+1;n+2]) [1;5;10]
+      = [1; 2; 3; 5; 6; 7; 10; 11; 12].
+*)
+
+Fixpoint flat_map {X Y : Type} (f : X -> list Y) (l : list X)
+                   : (list Y) :=
+  match l with
+    | []     => []
+    | h :: t => app (f h) (flat_map f t)
+  end.
+
+Example test_flat_map1:
+  flat_map (fun n => [n;n;n]) [1;5;4]
+  = [1; 1; 1; 5; 5; 5; 4; 4; 4].
+Proof. reflexivity. Qed.
+
+Definition option_map {X Y : Type} (f : X -> Y) (xo : option X)
+                      : option Y :=
+  match xo with
+    | None   => None
+    | Some x => Some (f x)
+  end.
+
+(** **** Exercise: 2 stars, optional (implicit_args) *)
+(** The definitions and uses of [filter] and [map] use implicit
+    arguments in many places.  Replace the curly braces around the
+    implicit arguments with parentheses, and then fill in explicit
+    type parameters where necessary and use Coq to check that you've
+    done so correctly.  (This exercise is not to be turned in; it is
+    probably easiest to do it on a _copy_ of this file that you can
+    throw away afterwards.)  [] *)
+
+Module Ex_implicit_args.
+
+Fixpoint map_explicit (X Y : Type) (f : X->Y) (l : list X)
+             : (list Y) :=
+  match l with
+  | []     => []
+  | h :: t => (f h) :: (map_explicit X Y f t)
+  end.
+
+Fixpoint filter_explicit (X:Type) (test: X->bool) (l:list X)
+                : (list X) :=
+  match l with
+  | []     => []
+  | h :: t => if test h then h :: (filter_explicit X test t)
+                        else       filter_explicit X test t
+  end.
+
+End Ex_implicit_args.
