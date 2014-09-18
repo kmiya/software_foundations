@@ -73,7 +73,7 @@ Fixpoint length (l : natlist) : nat :=
 
 Fixpoint app (l1 l2 : natlist) : natlist :=
   match l1 with
-  | nil    => l2
+  | nil => l2
   | h :: t => h :: (app t l2)
   end.
 
@@ -112,7 +112,7 @@ Fixpoint oddmembers (l:natlist) : natlist :=
     | nil => nil
     | h :: t =>  match oddb h with
                    | true  => h :: oddmembers t
-                   | false  => oddmembers t
+                   | false => oddmembers t
                  end
   end.
 
