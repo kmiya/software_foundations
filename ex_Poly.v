@@ -465,3 +465,118 @@ Fixpoint filter_explicit (X:Type) (test: X->bool) (l:list X)
   end.
 
 End Ex_implicit_args.
+
+(** ** Fold *)
+
+Fixpoint fold {X Y:Type} (f: X->Y->Y) (l:list X) (b:Y) : Y :=
+  match l with
+  | nil => b
+  | h :: t => f h (fold f t b)
+  end.
+
+(** **** Exercise: 1 star, advanced (fold_types_different) *)
+(** Observe that the type of [fold] is parameterized by _two_ type
+    variables, [X] and [Y], and the parameter [f] is a binary operator
+    that takes an [X] and a [Y] and returns a [Y].  Can you think of a
+    situation where it would be useful for [X] and [Y] to be
+    different? *)
+
+(* For example, let X be nam and Y be bool. The setting is useful for detecting some exceptional numbers. *)
+
+
+(** ** Functions For Constructing Functions *)
+
+Definition constfun {X: Type} (x: X) : nat->X :=
+  fun (k:nat) => x.
+
+Definition ftrue := constfun true.
+
+Definition override {X: Type} (f: nat->X) (k:nat) (x:X) : nat->X:=
+  fun (k':nat) => if beq_nat k k' then x else f k'.
+
+Definition fmostlytrue := override (override ftrue 1 false) 3 false.
+
+(** **** Exercise: 1 star (override_example) *)
+(** Before starting to work on the following proof, make sure you
+    understand exactly what the theorem is saying and can paraphrase
+    it in your own words.  The proof itself is straightforward. *)
+
+Theorem override_example : forall (b:bool),
+  (override (constfun b) 3 true) 2 = b.
+Proof.
+  intros b. reflexivity. Qed.
+(* The input 2 is not equal to 3, so the override returns (constfun b) 2.
+   It's just b by definition of constfun. *)
+(** [] *)
+
+
+(** * The [unfold] Tactic *)
+
+Theorem override_eq : forall {X:Type} x k (f:nat->X),
+  (override f k x) k = x.
+Proof.
+  intros X x k f.
+  unfold override.
+  rewrite <- beq_nat_refl.
+  reflexivity.  Qed.
+
+(** **** Exercise: 2 stars (override_neq) *)
+Theorem override_neq : forall (X : Type) x1 x2 k1 k2 (f : nat -> X),
+  f k1 = x1 ->
+  beq_nat k2 k1 = false ->
+  (override f k2 x2) k1 = x1.
+Proof.
+  intros X x1 x2 k1 k2 f H1 H2.
+  unfold override.
+  rewrite H2.
+  rewrite H1. reflexivity.
+Qed.
+
+
+(** * Additional Exercises *)
+
+(** **** Exercise: 2 stars (fold_length) *)
+(** Many common functions on lists can be implemented in terms of
+   [fold].  For example, here is an alternative definition of [length]: *)
+
+Definition fold_length {X : Type} (l : list X) : nat :=
+  fold (fun _ n => S n) l 0.
+
+Example test_fold_length1 : fold_length [4;7;0] = 3.
+Proof. reflexivity. Qed.
+
+(** Prove the correctness of [fold_length]. *)
+
+Theorem fold_length_correct : forall X (l : list X),
+  fold_length l = length l.
+Proof.
+  intros X l.
+  unfold fold_length.
+  induction l as [| h t].
+  Case "l = []".
+    reflexivity.
+  Case "l = cons".
+    simpl. rewrite IHt. reflexivity.
+Qed.
+
+(** **** Exercise: 3 stars (fold_map) *)
+(** We can also define [map] in terms of [fold].  Finish [fold_map]
+    below. *)
+
+Definition fold_map {X Y : Type} (f : X -> Y) (l : list X) : list Y :=
+  fold (fun a l' => f a :: l') l [].
+
+(** Write down a theorem in Coq stating that [fold_map] is correct,
+    and prove it. *)
+
+Theorem fold_map_correct : forall (X Y : Type) (f : X -> Y) (l : list X),
+  fold_map f l = map f l.
+Proof.
+  intros X Y f l.
+  unfold fold_map.
+  induction l as [| h t].
+  Case "l = []".
+    reflexivity.
+  Case "l = cons".
+    simpl. rewrite IHt. reflexivity.
+Qed.
