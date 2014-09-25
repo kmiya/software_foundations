@@ -310,3 +310,32 @@ Proof.
     SCase "n = 0". apply e2. apply IHm'.
     SCase "n = S n'". apply e4. apply IHm'.
 Qed.
+
+(** * Using [destruct] on Compound Expressions *)
+
+(** **** Exercise: 1 star (override_shadow) *)
+Theorem override_shadow : forall (X:Type) x1 x2 k1 k2 (f : nat->X),
+  (override (override f k1 x2) k1 x1) k2 = (override f k1 x1) k2.
+Proof.
+  intros X x1 x2 k1 k2 f. unfold override.
+  destruct (beq_nat k1 k2).
+    Case "beq_nat k1 k2 = true". reflexivity.
+    Case "beq_nat k1 k2 = false". reflexivity.
+Qed.
+
+(** **** Exercise: 3 stars, optional (combine_split) *)
+(** Complete the proof below *)
+
+(* ref: http://lpaste.net/2450854973576052736 *)
+Theorem combine_split : forall X Y (l : list (X * Y)) l1 l2,
+  split l = (l1, l2) ->
+  combine l1 l2 = l.
+Proof.
+  intros X Y l. induction l as [| (t1, t2) t].
+  Case "l = []".
+    intros l1 l2 eq. inversion eq. reflexivity.
+  Case "l = (t1, t2) :: t". intros l1 l2 eq. inversion eq.
+  simpl. rewrite IHt. reflexivity.
+  destruct (split t) as [x1 x2].
+    SCase "split t = (x1 x2)". reflexivity.
+Qed.
