@@ -339,3 +339,156 @@ Proof.
   destruct (split t) as [x1 x2].
     SCase "split t = (x1 x2)". reflexivity.
 Qed.
+
+(** **** Exercise: 2 stars (destruct_eqn_practice) *)
+
+(* ref: https://github.com/jwiegley/software-foundations/blob/master/MoreCoq.v *)
+Theorem bool_fn_applied_thrice :
+  forall (f : bool -> bool) (b : bool),
+  f (f (f b)) = f b.
+Proof.
+  intros f b. destruct b.
+  Case "b = true". destruct (f true) eqn:Hft.
+    SCase "f true = true". rewrite Hft. apply Hft.
+    SCase "f true = false". destruct (f false) eqn:Hff.
+      SSCase "f false = true".  apply Hft.
+      SSCase "f false = false". apply Hff.
+  Case "b = false". destruct (f false) eqn:Hff.
+    SCase "f false = true". destruct (f true) eqn:Hft.
+      SSCase "f true = true".  apply Hft.
+      SSCase "f true = false". apply Hff.
+    SCase "f false = false". rewrite Hff. apply Hff.
+Qed.
+
+(** **** Exercise: 2 stars (override_same) *)
+Theorem override_same : forall (X:Type) x1 k1 k2 (f : nat->X),
+  f k1 = x1 ->
+  (override f k1 x1) k2 = f k2.
+Proof.
+  intros X x1 k1 k2 f eq. unfold override.
+  destruct (beq_nat k1 k2) eqn:H.
+  Case "beq_nat k1 k2 = true".
+    apply beq_nat_true in H. rewrite <- H. symmetry. apply eq.
+  Case "beq_nat k1 k2 = false".
+    reflexivity.
+Qed.
+
+(** * Review *)
+
+(** * Additional Exercises *)
+
+(** **** Exercise: 3 stars (beq_nat_sym) *)
+Theorem beq_nat_sym : forall (n m : nat),
+  beq_nat n m = beq_nat m n.
+Proof.
+  intros n. induction n as [| n'].
+  Case "n = 0".
+    intros m. destruct m as [| m'].
+    SCase "m = 0".    reflexivity.
+    SCase "m = S m'". apply zero_nbeq_S.
+  Case "n = S n'".
+    intros m. destruct m as [| m'].
+    SCase "m = 0".    apply S_nbeq_0.
+    SCase "m = S m'". simpl. apply IHn'.
+Qed.
+
+(** **** Exercise: 3 stars, advanced, optional (beq_nat_sym_informal) *)
+(** Give an informal proof of this lemma that corresponds to your
+    formal proof above:
+
+   Theorem: For any [nat]s [n] [m], [beq_nat n m = beq_nat m n].
+
+   Proof:
+   (* TODO *)
+[]
+ *)
+
+(** **** Exercise: 3 stars, optional (beq_nat_trans) *)
+Theorem beq_nat_trans : forall n m p,
+  beq_nat n m = true ->
+  beq_nat m p = true ->
+  beq_nat n p = true.
+Proof.
+  intros n m p e1 e2.
+  apply beq_nat_true in e1.
+  apply beq_nat_true in e2.
+  rewrite -> e2 in e1.
+  rewrite e1. symmetry. apply beq_nat_refl.
+Qed.
+
+(** **** Exercise: 3 stars, advanced (split_combine) *)
+(** We have just proven that for all lists of pairs, [combine] is the
+    inverse of [split].  How would you formalize the statement that
+    [split] is the inverse of [combine]?
+
+    Complete the definition of [split_combine_statement] below with a
+    property that states that [split] is the inverse of
+    [combine]. Then, prove that the property holds. (Be sure to leave
+    your induction hypothesis general by not doing [intros] on more
+    things than necessary.  Hint: what property do you need of [l1]
+    and [l2] for [split] [combine l1 l2 = (l1,l2)] to be true?)  *)
+
+(* ref: https://github.com/tismith/sf/blob/master/MoreCoq.v *)
+
+Definition split_combine_statement : Prop :=
+  forall {X Y: Type} (l1 : list X) (l2 : list Y),
+  length l1 = length l2 -> split (combine l1 l2) = (l1, l2).
+
+Theorem split_combine : split_combine_statement.
+Proof.
+  unfold split_combine_statement.
+  induction l1 as [| h1 t1].
+  Case "l1 = []".
+    intros l2 eq.
+    destruct l2 as [| h2 t2].
+    SCase "l2 = []".
+      reflexivity.
+    SCase "l2 = h2 :: t2".
+      inversion eq.
+  Case "l1 = h1 :: t1".
+    intros l2 eq.
+    induction l2 as [| h3 t3] eqn:Hl2.
+    SCase "l2 = []".
+      inversion eq.
+    SCase "l2 = h3 :: t3".
+      inversion eq. apply IHt1 in H0. simpl. rewrite -> H0. reflexivity.
+Qed.
+
+(** **** Exercise: 3 stars (override_permute) *)
+Theorem override_permute : forall (X:Type) x1 x2 k1 k2 k3 (f : nat->X),
+  beq_nat k2 k1 = false ->
+  (override (override f k2 x2) k1 x1) k3 = (override (override f k1 x1) k2 x2) k3.
+Proof.
+  intros X x1 x2 k1 k2 k3 f H. unfold override.
+  destruct (beq_nat k1 k3) eqn:H13.
+  Case "beq_nat k1 k3 = true".
+    apply beq_nat_true in H13. rewrite H13 in H.
+    rewrite H. reflexivity.
+  Case "beq_nat k1 k3 = false".
+    destruct (beq_nat k2 k3) eqn:H23.
+    SCase "beq_nat k2 k3 = true". reflexivity.
+    SCase "beq_nat k2 k3 = false". reflexivity.
+Qed.
+
+(** **** Exercise: 3 stars, advanced (filter_exercise) *)
+(** This one is a bit challenging.  Pay attention to the form of your IH. *)
+
+(* ref: https://github.com/tismith/sf/blob/master/MoreCoq.v *)
+
+Theorem filter_exercise : forall (X : Type) (test : X -> bool)
+                             (x : X) (l lf : list X),
+     filter test l = x :: lf ->
+     test x = true.
+Proof.
+  intros X test x l. induction l as [| l1 l2].
+  Case "l = []".
+    intros lf H. inversion H.
+  Case "l = l1 :: l2".
+    simpl.
+    destruct (test l1) eqn:Hl1.
+    SCase "test l1 = true".
+      intros lf H.
+      inversion H. rewrite <- Hl1. inversion H1. reflexivity.
+    SCase "test l1 = false".
+      apply IHl2.
+Qed.
