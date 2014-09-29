@@ -492,3 +492,107 @@ Proof.
     SCase "test l1 = false".
       apply IHl2.
 Qed.
+
+(** **** Exercise: 4 stars, advanced (forall_exists_challenge) *)
+(** Define two recursive [Fixpoints], [forallb] and [existsb].  The
+    first checks whether every element in a list satisfies a given
+    predicate:
+      forallb oddb [1;3;5;7;9] = true
+
+      forallb negb [false;false] = true
+
+      forallb evenb [0;2;4;5] = false
+
+      forallb (beq_nat 5) [] = true
+    The second checks whether there exists an element in the list that
+    satisfies a given predicate:
+      existsb (beq_nat 5) [0;2;3;6] = false
+
+      existsb (andb true) [true;true;false] = true
+
+      existsb oddb [1;0;0;0;0;3] = true
+
+      existsb evenb [] = false
+    Next, define a _nonrecursive_ version of [existsb] -- call it
+    [existsb'] -- using [forallb] and [negb].
+
+    Prove that [existsb'] and [existsb] have the same behavior.
+*)
+
+Fixpoint forallb {X : Type} (fn : X -> bool) (l : list X) : bool :=
+  match l with
+    | nil => true
+    | cons h t => match fn h with
+               | false => false
+               | true  => forallb fn t
+             end
+  end.
+
+Example test_forallb1:
+  forallb oddb [1;3;5;7;9] = true.
+Proof. reflexivity. Qed.
+Example test_forallb2:
+  forallb negb [false;false] = true.
+Proof. reflexivity. Qed.
+Example test_forallb3:
+  forallb evenb [0;2;4;5] = false.
+Proof. reflexivity. Qed.
+Example test_forallb4:
+  forallb (beq_nat 5) [] = true.
+Proof. reflexivity. Qed.
+
+Fixpoint existsb {X : Type} (fn : X -> bool) (l : list X) : bool :=
+  match l with
+    | nil => false
+    | cons h t => match fn h with
+                    | true  => true
+                    | false => existsb fn t
+                  end
+  end.
+
+Example test_existsb1:
+  existsb (beq_nat 5) [0;2;3;6] = false.
+Proof. reflexivity. Qed.
+Example test_existsb2:
+  existsb (andb true) [true;true;false] = true.
+Proof. reflexivity. Qed.
+Example test_existsb3:
+  existsb oddb [1;0;0;0;0;3] = true.
+Proof. reflexivity. Qed.
+Example test_existsb4:
+  existsb evenb [] = false.
+Proof. reflexivity. Qed.
+
+Definition existsb' {X : Type} (fn : X -> bool) (l : list X) : bool :=
+  negb (forallb (fun x => negb (fn x)) l).
+
+Example test_existsb'1:
+  existsb' (beq_nat 5) [0;2;3;6] = false.
+Proof. reflexivity. Qed.
+Example test_existsb'2:
+  existsb' (andb true) [true;true;false] = true.
+Proof. reflexivity. Qed.
+Example test_existsb'3:
+  existsb' oddb [1;0;0;0;0;3] = true.
+Proof. reflexivity. Qed.
+Example test_existsb'4:
+  existsb' evenb [] = false.
+Proof. reflexivity. Qed.
+
+Theorem ex_existsb' : forall {X : Type} (fn : X -> bool) (l : list X),
+  existsb fn l = existsb' fn l.
+Proof.
+  intros X fn l. induction l as [| h t].
+  Case "l = []".
+    unfold existsb'. reflexivity.
+  Case "l = cons h t".
+    simpl. destruct (fn h) eqn:H.
+    SCase "fn h = true".
+      unfold existsb'. simpl.
+      rewrite H. reflexivity.
+    SCase "fn h = false".
+      unfold existsb'.
+      simpl. rewrite H. simpl.
+      unfold existsb' in IHt.
+      apply IHt.
+Qed.
