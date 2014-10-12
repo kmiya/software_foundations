@@ -346,3 +346,59 @@ Proof.
   intros P. unfold not. intros H0. apply H0.
   right. intros HP. apply H0. left. apply HP.
 Qed.
+
+(** ** Inequality *)
+
+Notation "x <> y" := (~ (x = y)) : type_scope.
+
+Theorem not_false_then_true : forall b : bool,
+  b <> false -> b = true.
+Proof.
+  intros b H. destruct b.
+  Case "b = true". reflexivity.
+  Case "b = false".
+    unfold not in H.
+    apply ex_falso_quodlibet.
+    apply H. reflexivity.   Qed.
+
+(** **** Exercise: 2 stars (false_beq_nat) *)
+Theorem false_beq_nat : forall n m : nat,
+     n <> m ->
+     beq_nat n m = false.
+Proof.
+  intros n.
+  induction n as [| n'].
+  Case "n = 0".
+    intros m H. unfold not in H. destruct m as [| m'].
+    SCase "m = 0".
+      simpl. apply ex_falso_quodlibet. apply H. reflexivity.
+    SCase "m = S m'".
+      simpl. reflexivity.
+  Case "n = S n'".
+    intros m H. destruct m as [| m'].
+    SCase "m = 0".
+      simpl. reflexivity.
+    SCase "m = S m'".
+      apply IHn'.
+      unfold not. unfold not in H. intros H0.
+      apply H. apply f_equal. apply H0.
+Qed.
+
+(** **** Exercise: 2 stars, optional (beq_nat_false) *)
+Theorem beq_nat_false : forall n m,
+  beq_nat n m = false -> n <> m.
+Proof.
+  intros n. induction n as [| n'].
+  Case "n = 0".
+    intros m H. destruct m as [| m'].
+    SCase "m = 0".
+      unfold not. inversion H.
+    SCase "m = S m'". intros H0. inversion H0.
+  Case "n = S n'".
+    intros m H. destruct m as [| m'].
+    SCase "m = 0".
+      unfold not. intro H0. inversion H0.
+    SCase "m = S m'".
+      apply IHn' in H. unfold not. unfold not in H.
+      intros H0. apply H. apply eq_add_S. apply H0.
+Qed.
